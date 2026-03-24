@@ -1,5 +1,4 @@
-import "./globals.css";
-
+// app/layout.js
 export const metadata = {
   title: "Inspektim Kantiere",
   description: "Sistemi GIS për Inspektimet",
