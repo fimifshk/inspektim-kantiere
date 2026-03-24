@@ -1,0 +1,1896 @@
+<<<<<<< HEAD
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
+    <base target="_top">
+    <title>Inspektimi</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        <?!= HtmlService.createTemplateFromFile('Style').evaluate().getContent(); ?>  /* CSS-i lokal per map dhe formën */  
+    </style>
+</head>
+<body>
+
+<div id="header-container">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <h1 style="margin: 0; font-size: 3.5em;">
+            <a href="<?= ScriptApp.getService().getUrl() ?>" style="text-decoration: none; color: inherit;">
+                Inspekto
+            </a>
+        </h1>
+        
+        <a href="<?= ScriptApp.getService().getUrl() ?>?page=manual" target="_blank" style="text-decoration: none; color: #007bff;" title="Manual Përdorimi">
+            <i class="material-icons" style="font-size: 48px; vertical-align: middle;" >help_outline</i>
+        </a>
+    </div>
+    <!-- <h1>
+      <a href="<?= ScriptApp.getService().getUrl() ?>?page=manual" style="text-decoration: none; color: inherit;">
+            INSPEKTIMI
+      </a>
+    </h1> -->
+    <div class="control-group d-flex align-items-center mb-3">    
+        <div class="form-check form-switch me-3 switch-lg">
+            <input class="form-check-input" type="checkbox" role="switch" id="toggleArea" checked onchange="toggleAreaAndSetOpacity()">
+        </div>
+        <label class="form-check-label me-3" for="toggleArea"><h1>Zona</h1></label>
+        <div class="flex-grow-1 me-3">
+            <input type="range" class="slider-lg" id="areaOpacitySlider" min="0.2" max="0.9" step="0.1" value="0.5" oninput="changeAreaOpacity(this.value)">
+        </div>
+        <select id="baseLayerSelector" class="form-select form-select-lg" onchange="changeBaseLayer(this.value)">Shtresat</select>        
+    </div>
+</div>
+
+<div id="mapid"></div>
+
+<form id="inspectionForm" onsubmit="return handleFormSubmit(this);">
+
+    <label for="email">Email Address:</label>
+    <input type="email" id="email" name="email" required oninput="checkFormValidity()" placeholder="Vendosni emailin tuaj...">
+
+    <label>Data & Ora e Regjistrimit:</label>
+    <div class="input-group">
+        <input type="date" id="data" name="data" required oninput="checkFormValidity()">
+        <input type="time" id="ora" name="ora" required oninput="checkFormValidity()">
+        <button type="button" id="setTimeButton" onclick="setCurrentDateTime()">
+            <span class="material-icons">calendar_month</span> 
+            <span class="material-icons">access_time</span> 
+        </button>
+    </div>
+
+    <label>Gjerësi & Gjatësi gjeografike:</label>
+    <div class="input-group" id="latLonGroup">
+        <input type="text" id="latitude" name="latitude" placeholder="Gjerësi (Lat)" readonly required>
+        <input type="text" id="longitude" name="longitude" placeholder="Gjatësi (Lon)" readonly required>
+        <button type="button" id="gpsButton" onclick="getLocationAndDisplay()">
+            <span class="material-icons">gps_fixed</span>
+        </button>
+    </div>
+
+    <label for="qellimi">Qëllimi i Inspektimit:</label>
+    <textarea id="qellimi" name="qellimi" rows="3" required oninput="checkFormValidity()"></textarea>
+
+    <label>Foto (Opsionale):</label>
+
+    <div class="file-input-group">
+        <label for="galleryFile_hidden" class="file-button-50">
+            <span class="material-icons">folder_open</span> Ngarko Foto
+        </label>
+        
+        <label for="cameraFile" class="file-button-50">
+            <span class="material-icons">photo_camera</span> Bëj Foto
+        </label>
+
+        <button type="button" id="clearFileButton" onclick="clearFile()" style="display: none; color: white;">
+            <span class="material-icons">delete_forever</span> Hiq Foton  
+        </button>
+    </div>
+
+    <div id="fileStatus">Asnjë foto nuk është zgjedhur.</div> 
+    
+    <input type="file" id="galleryFile_hidden" name="galleryFile_hidden" accept="image/*" style="display: none;" onchange="handleFileInput(this)">
+    <input type="file" id="cameraFile" name="cameraFile_hidden" accept="image/*" capture="camera" style="display: none;" onchange="handleFileInput(this)">
+    <input type="hidden" id="photoFile" name="photoFile"> 
+
+    <hr>
+    
+    <div class="submit-group-wrapper">
+        <button type="button" class="btn-25" id="newButton" onclick="resetForm()"> <span class="material-icons">add_circle</span> Shto</button>
+        <button type="button" class="btn-25" id="testButton" onclick="testConnection()"> <span class="material-icons">tap_and_play</span> Testo </button>
+        <button type="submit" class="btn-50" id="submitButton" disabled> <span class="material-icons">send</span> Dërgo të Dhënat</button> 
+    </div>
+</form>
+
+<div class="footer-actions">    
+    <button type="button" class="action-button results-button" onclick="goToResults()"> <span class="material-icons">bar_chart</span> Rezultatet </button>
+
+    <button type="button" id="syncButton" class="action-button sync-button" onclick="syncData()" disabled>
+        <span class="material-icons">change_circle</span>
+        Sinkronizo Offline (<span id="offlineCount">0</span>)
+    </button>    
+</div>
+
+<div id="syncProgressContainer" style="display:none; margin-top: 15px;">
+    <progress id="syncProgressBar" value="0" max="100" style="width: 100%; height: 30px;"></progress>
+    <div id="syncProgressStatus" style="text-align: center; font-size: 32px; font-weight: 900; margin-top: 5px;"></div>
+</div>
+
+<div id="statusMessage" class="status"></div>
+
+<script>
+    var map;
+    var marker;
+    var accuracyCircle;
+    var isGpsCaptured = false;
+    const ASIG_WMS_URL = 'https://geoportal.asig.gov.al/service/wms'; 
+    var baseLayers = {}; 
+    var assignedAreaLayer; 
+    var isFileSizeValid = true;
+    let db;
+    const DB_NAME = 'InspeksionetOfflineDB';
+    const STORE_NAME = 'inspektimet';
+
+    // # NDËRTIMI I PROGRESS BAR-IT (Funksionet e Reja)
+
+    function showProgress(message, value = 0) {
+        const container = document.getElementById('syncProgressContainer');
+        const progressBar = document.getElementById('syncProgressBar');
+        const progressStatus = document.getElementById('syncProgressStatus');
+
+        // Fsheh mesazhin e statusit normal
+        document.getElementById("statusMessage").style.display = 'none';
+
+        progressBar.value = value;
+        progressStatus.textContent = message;
+        container.style.display = 'block';
+    }
+
+    function updateProgress(value, message) {
+        const progressBar = document.getElementById('syncProgressBar');
+        const progressStatus = document.getElementById('syncProgressStatus');
+        progressBar.value = value;
+        if (message) progressStatus.textContent = message;
+    }
+
+    function hideProgress(finalMessage = null, isError = false) {
+        const container = document.getElementById('syncProgressContainer');
+        const statusMessage = document.getElementById("statusMessage");
+
+        container.style.display = 'none';
+        statusMessage.style.display = 'block';
+
+        if (finalMessage) {
+            const color = isError ? 'red' : 'green';
+            statusMessage.innerHTML = `<span style="color: ${color};">${finalMessage}</span>`;
+        }
+    }
+
+
+    // 1. KRIJIMI/HAPJA E DATABAZËS
+    function openDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1); 
+
+            request.onerror = event => {
+                console.error("Gabim në hapjen e IndexedDB:", event.target.error);
+                reject(event.target.error);
+            };
+
+            request.onsuccess = event => {
+                db = event.target.result;
+                console.log("IndexedDB u hap me sukses.");
+                updateOfflineCount(); 
+                resolve(db);
+            };
+
+            request.onupgradeneeded = event => {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+        });
+    }
+
+    // 2. RUAJTJA E TË DHËNAVE NË IDB DHE KTHIMI I NUMRIT TË RI TË REKORDEVE
+    function saveToIndexedDB(data) {
+        return new Promise((resolve, reject) => {
+            if (!db) {
+                reject(new Error("Databaza nuk është inicializuar."));
+                return;
+            }
+
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            const dataToStore = { ...data, timestamp_local: new Date().getTime() };
+            const request = store.add(dataToStore);
+
+            request.onsuccess = () => {
+                const countRequest = store.count();
+                
+                countRequest.onsuccess = () => {
+                    updateOfflineCount();
+                    resolve(countRequest.result); 
+                };
+                
+                countRequest.onerror = () => resolve(1); 
+            };
+
+            request.onerror = event => {
+                reject(event.target.error);
+            };
+        });
+    }
+
+    // 3. MARRJA E TË DHËNAVE NGA IDB
+    function getAllOfflineData() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("Databaza nuk është inicializuar.");
+            
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = event => resolve(event.target.result); 
+            request.onerror = event => reject(event.target.error);
+        });
+    }
+
+    // 4. FSHIRJA E TË DHËNAVE NGA IDB PAS SINKRONIZIMIT
+    function deleteFromIndexedDB(id) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("Databaza nuk është inicializuar.");
+            
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = event => reject(event.target.error);
+        });
+    }
+
+    // 5. RUAJTJA DHE AKTUALIZIMI I NUMRIT TË REGJISTRIMEVE OFFLINE
+    function updateOfflineCount() {
+        if (!db) return;
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.count();
+
+        request.onsuccess = event => {
+            const count = event.target.result;
+            document.getElementById('offlineCount').textContent = count;
+            document.getElementById('syncButton').disabled = (count === 0);
+        };
+    }
+    
+    // Merr të dhënat nga TeDhenatGjeo.gs dhe e vendos në variabël
+    //const USER_ASSIGNED_AREA = { "type": "FeatureCollection", "features": [] }; // Një objekt bosh si shembull
+    const USER_ASSIGNED_AREA = <?!= JSON.stringify(getUserAssignedArea()); ?>;
+    
+
+    function changeBaseLayer(layerName) {
+        if (!map) return;
+        
+        baseLayers.forEach(layer => {
+            if (map.hasLayer(layer.layer)) {
+                map.removeLayer(layer.layer);
+            }
+        });
+        
+        const newLayer = baseLayers.find(layer => layer.name === layerName);
+        if (newLayer) {
+            newLayer.layer.addTo(map);
+        }
+    }
+
+    function initMap() {
+        var defaultCoords = [41.3275, 19.8187];
+        
+        if (map) return; 
+        
+        map = L.map('mapid').setView(defaultCoords, 12); 
+
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        });
+        const ortofoto20cm = L.tileLayer.wms(ASIG_WMS_URL, {
+            layers: 'orthophoto_2015:OrthoImagery_20cm', format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, attribution: 'ASIG Ortofoto 20 cm'
+        });
+        const ortofoto8cm = L.tileLayer.wms(ASIG_WMS_URL, {
+            layers: 'orthophoto_2015:OrthoImagery_8cm', format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, attribution: 'ASIG Ortofoto 8 cm'
+        });
+        const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        baseLayers = [     
+            { name: "Esri World Imagery", layer: esriImagery },
+            { name: "OpenStreetMap", layer: osmLayer },
+            { name: "ALB 2015 20 cm", layer: ortofoto20cm },
+            { name: "ALB 2015 8 cm", layer: ortofoto8cm }            
+        ];
+        
+        esriImagery.addTo(map);
+        
+        const selector = document.getElementById('baseLayerSelector');
+        baseLayers.forEach(layer => {
+            const option = document.createElement('option');
+            option.value = layer.name;
+            option.text = layer.name;
+            selector.appendChild(option);
+        });
+        
+        const initialOpacity = parseFloat(document.getElementById('areaOpacitySlider').value);
+
+        assignedAreaLayer = L.geoJSON(USER_ASSIGNED_AREA, {
+            style: function (feature) {
+                return {
+                    color: "#dc3545", weight: 3, opacity: 0.8, fillColor: "#dc3545", fillOpacity: initialOpacity         
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties && feature.properties.name) {
+                    layer.bindPopup("Zona e Caktuar: " + feature.properties.name);
+                }
+            }
+        }).addTo(map); 
+
+        map.invalidateSize();
+    }
+    
+    function changeAreaOpacity(value) {
+        const opacity = parseFloat(value); 
+        const checkbox = document.getElementById('toggleArea');
+        
+        if (assignedAreaLayer && checkbox.checked) {
+            assignedAreaLayer.setStyle({
+                fillOpacity: opacity 
+            });
+        }
+    }
+    
+    function toggleAreaAndSetOpacity() {
+        const checkbox = document.getElementById('toggleArea');
+        const opacityValue = parseFloat(document.getElementById('areaOpacitySlider').value);
+
+        if (assignedAreaLayer) {
+            if (checkbox.checked) {
+                if (!map.hasLayer(assignedAreaLayer)) {
+                    assignedAreaLayer.addTo(map);
+                }
+                assignedAreaLayer.setStyle({
+                    fillOpacity: opacityValue
+                });
+            } else {
+                if (map.hasLayer(assignedAreaLayer)) {
+                    map.removeLayer(assignedAreaLayer);
+                }
+            }
+        }
+    }
+    
+    window.onload = function() {
+        initMap();
+        
+        changeAreaOpacity(document.getElementById('areaOpacitySlider').value); 
+
+        openDatabase()
+        .then(() => {
+            console.log("IndexedDB u inicializua dhe u kontrollua numri i të dhënave offline.");
+        })
+        .catch(e => {
+            console.warn("IndexedDB nuk mund të hapet. Funksionaliteti offline nuk do të jetë në dispozicion.", e);
+            document.getElementById('syncButton').disabled = true;
+        });
+
+        setTimeout(function() {
+            if (map) {
+                map.invalidateSize(true);
+            }
+        }, 100);
+
+        checkFormValidity();
+    };
+    
+    // -----------------------------------------------------------
+    // # FUNKSIONET E FORMULARIT DHE PROGRESSIT TË DËRGIMIT
+    // -----------------------------------------------------------
+
+    function handleFileInput(input) {
+        const fileStatus = document.getElementById('fileStatus'); 
+        const clearButton = document.getElementById('clearFileButton');
+        const hiddenFileInput = document.getElementById('photoFile');
+        const uploadButtons = document.querySelectorAll('.file-input-group label');
+
+        hiddenFileInput.fileToSubmit = null;
+        isFileSizeValid = true; 
+        
+        // VLERË NGA USER GUIDA: Limiti i madhësisë së dërgimit PËRFUNDIMTAR
+        const MAX_DELIVERY_SIZE_MB = 5; 
+        const MAX_DELIVERY_SIZE_BYTES = MAX_DELIVERY_SIZE_MB * 1024 * 1024;
+
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
+            
+            fileStatus.innerHTML = `<span style="color: blue;">Duke procesuar dhe kompresuar foton (Origjinale: ${originalSizeMB} MB)... Ju lutemi prisni.</span>`;
+            
+            // Kompresojmë gjithmonë nëse skedari origjinal është mbi 1MB ose mbi 5MB (për siguri)
+            if (file.size > 1 * 1024 * 1024 || file.size > MAX_DELIVERY_SIZE_BYTES) { 
+                
+                // Faza 1: Kompresimi
+                compressImage(file)
+                    .then(compressedBlob => {
+                        hiddenFileInput.fileToSubmit = compressedBlob;
+                        
+                        const newSizeMB = (compressedBlob.size / 1024 / 1024).toFixed(2);
+                        const source = input.id === 'cameraFile' ? 'Kamera &#128248;' : 'Galeria &#128444;'; 
+                        
+                        if (compressedBlob.size > MAX_DELIVERY_SIZE_BYTES) {
+                            // Kjo ndodh rrallë, por mbetet si kontroll sigurie
+                            isFileSizeValid = false;
+                            fileStatus.innerHTML = `<span style="color: red;">❌ Gabim! Fotoja është shumë e madhe edhe pas kompresimit (${newSizeMB} MB). Maksimuni: ${MAX_DELIVERY_SIZE_MB} MB.</span>`;
+                        } else {
+                            isFileSizeValid = true;
+                            fileStatus.innerHTML = `✅ <b>File:</b> ${file.name} (Origjinal: ${originalSizeMB} MB, I Kompresuar: ${newSizeMB} MB) - Burimi: ${source}`;
+                        }
+
+                        // Fiksoni pamjen e butonave
+                        uploadButtons.forEach(btn => {
+                            btn.classList.remove('file-button-50');
+                            btn.classList.add('file-button-33');
+                        });
+                        clearButton.style.display = 'flex';
+                        
+                        // Pastroni fushat origjinale të input-it (shmang dërgimin e skedarit origjinal)
+                        document.getElementById('galleryFile_hidden').value = '';
+                        document.getElementById('cameraFile').value = '';
+                        
+                        checkFormValidity();
+                    })
+                    .catch(error => {
+                        // Nëse dështon lexuesi ose kompresimi
+                        fileStatus.innerHTML = `<span style="color: red;">❌ Gabim në procesimin e fotos. Provoni një foto tjetër.</span>`;
+                        isFileSizeValid = false;
+                        checkFormValidity();
+                    });
+            } else {
+                // Skedarët e vegjël (< 1MB) shkojnë direkt
+                hiddenFileInput.fileToSubmit = file;
+                isFileSizeValid = true;
+                
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                const source = input.id === 'cameraFile' ? 'Kamera &#128248;' : 'Galeria &#128444;'; 
+                fileStatus.innerHTML = `<b>File:</b> ${file.name} (${fileSizeMB} MB) - Burimi: ${source} (Nuk u kompresua)`;
+                
+                uploadButtons.forEach(btn => {
+                    btn.classList.remove('file-button-50');
+                    btn.classList.add('file-button-33');
+                });
+                clearButton.style.display = 'flex';
+                checkFormValidity();
+            }
+            
+        } else {
+            // Asnjë skedar nuk u zgjodh ose u pastrua
+            fileStatus.innerHTML = 'Asnjë file nuk është zgjedhur.';
+            uploadButtons.forEach(btn => {
+                btn.classList.remove('file-button-33');
+                btn.classList.add('file-button-50');
+            });
+            clearButton.style.display = 'none'; 
+            isFileSizeValid = true; 
+            checkFormValidity();
+        }
+    }
+
+    /* ========================================================================= */
+    /* # FUNKSIONI I RI: ZVOGËLIMI DHE KOMPRESIMI I FOTOS ME CANVAS */
+    /* ========================================================================= */
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = function(readerEvent) {
+                const image = new Image();
+                
+                image.onload = function() {
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+
+                    // Vlerat maksimale për të synuar rreth 3MB
+                    const MAX_WIDTH = 2500;
+                    const MAX_HEIGHT = 2500; 
+                    const quality = 0.90; // Cilësia e kompresimit (90%)
+
+                    let width = image.width;
+                    let height = image.height;
+
+                    // Rregullo madhësinë për të ruajtur raportin (aspect ratio)
+                    if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                        if (width > height) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        } else {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // Vizato imazhin me rezolucionin e ri
+                    ctx.drawImage(image, 0, 0, width, height);
+
+                    // Eksporto si Base64 JPEG me cilësinë e kërkuar
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    
+                    // Përgatit një Blob të ri nga Base64, e ruan si 'skedar' 
+                    const dataUrlParts = compressedDataUrl.split(',');
+                    const mimeType = dataUrlParts[0].match(/:(.*?);/)[1];
+                    const base64 = dataUrlParts[1];
+                    
+                    // Kthe Base64 në një Blob (File-like object)
+                    const binary = atob(base64);
+                    const array = [];
+                    for (let i = 0; i < binary.length; i++) {
+                        array.push(binary.charCodeAt(i));
+                    }
+                    const compressedBlob = new Blob([new Uint8Array(array)], { type: mimeType });
+                    
+                    // Shtojmë vetëm emrin origjinal të skedarit (vetëm për reference)
+                    compressedBlob.name = file.name;
+                    
+                    resolve(compressedBlob);
+                };
+                image.src = readerEvent.target.result;
+            };
+
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function clearFile() {
+        document.getElementById('galleryFile_hidden').value = '';
+        document.getElementById('cameraFile').value = '';
+        handleFileInput(document.getElementById('galleryFile_hidden'));
+    }
+
+    // FUNKSIONI I MODIFIKUAR KRYESOR
+    function handleFormSubmit(form) {
+        const submitButton = document.getElementById("submitButton");
+        
+        if (submitButton.disabled) {
+            hideProgress('❌ Plotësoni të gjitha fushat e kërkuara.', true);
+            return false;
+        }
+        
+        submitButton.disabled = true;
+        showProgress('Duke filluar procesin...', 0);
+
+        const formData = new FormData(form);
+
+        const plainData = {
+            email: formData.get("email"), data: formData.get("data"), ora: formData.get("ora"), qellimi: formData.get("qellimi"), latitude: formData.get("latitude"), longitude: formData.get("longitude")
+        };
+        
+        const fileToUploadBlob = document.getElementById('photoFile').fileToSubmit;
+
+        function sendOrStore(dataToSend) {
+            
+            if (!isOnline()) {
+                // NËSE OFFLINE: Shkon direkt te ruajtja lokale
+                onFailure("Lidhja me internetin mungon. Ruajtja u krye lokalisht.", dataToSend);
+                return; 
+            }
+
+            // NËSE ONLINE: Këtu fillon dërgimi i vërtetë, progresi simulohet 50%
+            updateProgress(50, 'Duke dërguar të dhënat në Server...');
+
+            google.script.run
+                .withSuccessHandler(onSuccess)
+                .withFailureHandler(function(error) {
+                    onFailure(error, dataToSend); 
+                })
+                .handleFileUpload(dataToSend);
+        }
+        
+        if (fileToUploadBlob) {
+            if (!isFileSizeValid) {
+                submitButton.disabled = false;
+                hideProgress('❌ Madhësia e file-it është e pavlefshme.', true);
+                return false;
+            }
+
+            // Faza 1: Leximi/Kodimi i fotos (Progresi shkon nga 0 në 50)
+            updateProgress(10, 'Duke koduar foto-n e kompresuar (Base64)...');
+
+            const reader = new FileReader();
+            reader.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    // Përdorim vetëm gjysmën e progresit (nga 0 në 49) për leximin e file-it
+                    const percent = Math.min(49, Math.round((e.loaded / e.total) * 49));
+                    updateProgress(percent, `Duke procesuar foto-n: ${percent}%`);
+                }
+            };
+            
+            reader.onload = function(e) {
+                updateProgress(50, 'Foto u kodua. Duke u përgatitur për dërgim...');
+                
+                const base64 = e.target.result;
+                const parts = base64.split(',');
+                // fileData mban vetëm vargun Base64, pa pjesën "data:image/jpeg;base64,"
+                plainData.fileData = parts.length > 1 ? parts[1] : parts[0]; 
+                plainData.fileName = fileToUploadBlob.name || "foto_e_kompresuar.jpg"; // Përdor emrin origjinal ose një emër default
+
+                sendOrStore(plainData); 
+            };
+            
+            reader.onerror = function(e) {
+                submitButton.disabled = false;
+                hideProgress(`❌ Gabim në leximin e file-it: ${e.target.error.message}`, true);
+            }
+
+            // Lexo Blob-in (Base64)
+            reader.readAsDataURL(fileToUploadBlob); 
+        } else {
+            // Dërgo vetëm të dhënat e formularit
+            sendOrStore(plainData); 
+        }
+
+        return false;
+    }
+
+    // FUNKSIONI I THIRRJES SUKSES (Ndryshuar lehtë)
+    function onSuccess(response) {
+        var submitButton = document.getElementById("submitButton");
+        
+        if (response && response.success) {
+            hideProgress('✅ Të dhënat u regjistruan me sukses!', false); // SUKSES ONLINE
+            resetForm(false); 
+        } else {
+            hideProgress('❌ GABIM SERVERI: ' + (response.message || 'Përgjigje e panjohur.'), true); // GABIM SERVERI
+        }
+        submitButton.disabled = false;
+        checkFormValidity();
+    }
+
+    // FUNKSIONI I THIRRJES GABIM (Ndryshuar për të shfaqur Progresin e Ruajtjes Lokale)
+    function onFailure(error, dataToStore) { 
+      var submitButton = document.getElementById("submitButton");
+      
+      // KONTROLLI KRYESOR: A ka të dhëna (dmth., a ka dështuar një dërgim formulari)?
+      if (dataToStore) {
+          
+          // Këtu shfaqet Progresi i Ruajtjes Lokale (shumë i shpejtë)
+          showProgress('Duke ruajtur të dhënat lokalisht...', 75);
+
+          saveToIndexedDB(dataToStore)
+              .then((numriTotal) => {
+                  
+                  // Përfundimi i progresit
+                  updateProgress(100, `Ruajtja lokale u krye. (Totali: ${numriTotal})`); 
+                  resetForm(true); 
+                  
+                  // Fsheh Progres Bar-in dhe shfaq Statusin
+                  setTimeout(() => {
+                      hideProgress(`⚠️ Offline: Të dhënat u ruajtën lokalisht. (Totali: ${numriTotal})`, false);
+                  }, 800); // Prit pak për të shfaqur 100%
+
+              })
+              .catch(idbError => {
+                  hideProgress(`❌ GABIM KRITIK! Dështoi dërgimi dhe ruajtja lokale: ${idbError.message || idbError}`, true);
+              })
+              .finally(() => {
+                  submitButton.disabled = false;
+                  checkFormValidity();
+              });
+      } else {
+          // RASTI 2: GABIM NË THIRRJE TË TJERA (p.sh., Testo Lidhjen ose Sinkronizimi)
+          // Këtu përdorim funksionin e ri hideProgress për të rregulluar shfaqjen e statusit
+          hideProgress(`❌ GABIM SERVERI: Lidhja dështoi. ${error.message || error}`, true);
+          submitButton.disabled = false;
+          checkFormValidity();
+      }
+    }
+
+    function setCurrentDateTime() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const dateString = `${yyyy}-${mm}-${dd}`;
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const timeString = `${hh}:${min}`;
+        document.getElementById('data').value = dateString;
+        document.getElementById('ora').value = timeString;
+        checkFormValidity();
+    }
+
+    function getLocationAndDisplay() {
+        // Përdorim statusMessage normal këtu, pasi nuk ka nevojë për Progres Bar
+        document.getElementById("statusMessage").innerHTML = '<span style="color: blue;">Duke kërkuar vendndodhjen... Lejo GPS.</span>';
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lon = position.coords.longitude;
+                    var accuracy = position.coords.accuracy;
+
+                    document.getElementById('latitude').value = lat.toFixed(6);
+                    document.getElementById('longitude').value = lon.toFixed(6);
+                    isGpsCaptured = true;
+                    displayMarker(lat, lon, accuracy);
+
+                    document.getElementById("statusMessage").innerHTML = '<span style="color: green;">✅ GPS u kap me sukses!</span>';
+                    checkFormValidity();
+                },
+                function(error) {
+                    document.getElementById("statusMessage").innerHTML = '<span style="color: red;">❌ Gabim GPS: ' + error.message + '. Përpiquni përsëri.</span>';
+                    isGpsCaptured = false;
+                },
+                {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
+            );
+        } else {
+            document.getElementById("statusMessage").innerHTML = '<span style="color: red;">❌ Vendndodhja nuk mbështetet nga ky shfletues.</span>';
+            isGpsCaptured = false;
+        }
+    }
+
+    function displayMarker(lat, lon, accuracy) { 
+        var zoomLevel = 19;
+        var coords = [lat, lon];
+        
+        if (marker) { map.removeLayer(marker); }
+        if (accuracyCircle) { map.removeLayer(accuracyCircle); }
+        
+        marker = L.marker(coords).addTo(map).bindPopup(`Vendndodhja e Kapur (Saktësia: ${accuracy.toFixed(1)} m)`).openPopup(); 
+        
+        accuracyCircle = L.circle(coords, {
+            radius: accuracy, 
+            color: '#007bff', 
+            fillColor: '#007bff', 
+            fillOpacity: 0.2, 
+            weight: 1
+        }).addTo(map);
+
+        map.setView(coords, zoomLevel);
+    }
+
+    function checkFormValidity() {
+        const form = document.getElementById('inspectionForm');
+        const submitButton = document.getElementById('submitButton');
+
+        const requiredInputsFilled = Array.from(form.querySelectorAll('[required]')).every(input => {
+            return input.value.trim() !== '';
+        });
+
+        submitButton.disabled = !(requiredInputsFilled && isFileSizeValid);
+    }
+
+    function syncData() {
+        const syncButton = document.getElementById('syncButton');
+        
+        syncButton.disabled = true;
+        showProgress('Duke filluar sinkronizimin...', 0);
+        
+        getAllOfflineData()
+            .then(offlineRecords => {
+                const totalRecords = offlineRecords.length;
+                let successCount = 0;
+                let failedCount = 0;
+                
+                if (totalRecords === 0) {
+                    hideProgress('✅ Asnjë e dhënë për t\'u sinkronizuar.', false);
+                    syncButton.disabled = false;
+                    return;
+                }
+
+                updateProgress(0, `0 nga ${totalRecords} u dërguan.`);
+
+                const processNextRecord = (index) => {
+                    if (index >= totalRecords) {
+                        
+                        const finalMsg = successCount === totalRecords 
+                            ? `✅ SUKSES: ${successCount} rekorde u sinkronizuan!`
+                            : `⚠️ U sinkronizuan ${successCount} rekorde. Dështuan ${failedCount} (kontrollo lidhjen).`;
+                            
+                        hideProgress(finalMsg, failedCount > 0);
+                        syncButton.disabled = false;
+                        updateOfflineCount(); 
+                        return;
+                    }
+
+                    const record = offlineRecords[index];
+                    
+                    google.script.run
+                        .withSuccessHandler((response) => {
+                            if (response.success) {
+                                successCount++;
+                                
+                                deleteFromIndexedDB(record.id)
+                                    .finally(() => {
+                                        const progress = ((successCount + failedCount) / totalRecords) * 100;
+                                        updateProgress(progress, `${successCount} nga ${totalRecords} u dërguan.`);
+                                        processNextRecord(index + 1);
+                                    });
+                            } else {
+                                // Rekordi dështon, por vazhdojmë me rekordin tjetër
+                                failedCount++;
+                                processNextRecord(index + 1); 
+                            }
+                        })
+                        .withFailureHandler((error) => {
+                            // Gabim në lidhjen e App Script
+                            failedCount++;
+                            processNextRecord(index + 1);
+                        })
+                        .handleFileUpload(record); 
+                };
+                
+                processNextRecord(0);
+
+            })
+            .catch(error => {
+                hideProgress(`❌ GABIM SINKRONIZIMI: Dështoi marrja e të dhënave lokale. ${error.message || error}`, true);
+                syncButton.disabled = false;
+                updateOfflineCount();
+            });
+    }
+
+    function testConnection() {
+        var statusMessage = document.getElementById("statusMessage");
+        statusMessage.innerHTML = '<span style="color: blue;">Duke testuar lidhjen me serverin...</span>';
+
+        google.script.run.withSuccessHandler(function(response) {
+            statusMessage.innerHTML = `<span style="color: green;">✅ SUKSES: ${response}</span>`;
+        }).withFailureHandler(onFailure).testFunction(); 
+    }
+
+    function isOnline() {
+        return navigator.onLine; 
+    }
+
+    function resetForm(clearStatus = true) {
+      // Pastron të gjitha fushat, përveç Email
+      document.getElementById('data').value = '';
+      document.getElementById('ora').value = '';
+      document.getElementById('qellimi').value = '';
+      document.getElementById('latitude').value = '';
+      document.getElementById('longitude').value = '';
+      
+      // Pastron foto-n
+      clearFile(); 
+      
+      isGpsCaptured = false;
+      if (marker) { map.removeLayer(marker); marker = null; }
+      if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+      
+      // Pastrimi i mesazhit bëhet opsional
+      if (clearStatus) {
+        document.getElementById("statusMessage").innerHTML = '';
+      }
+      
+      // Sigurohemi që Progres Bari të fshihet
+      document.getElementById('syncProgressContainer').style.display = 'none';
+      document.getElementById("statusMessage").style.display = 'block';
+
+      checkFormValidity();
+      
+      document.getElementById("submitButton").disabled = true;
+  }
+
+    function hasOfflineData() {
+        const countElement = document.getElementById('offlineCount'); 
+        const count = parseInt(countElement.textContent || '0');
+        return count > 0;
+    }
+
+    function hasUnsubmittedData() {
+        return document.getElementById('qellimi').value.trim() !== '' || 
+                document.getElementById('latitude').value.trim() !== ''; 
+    }
+
+    window.onbeforeunload = function() {
+        if (hasOfflineData() || hasUnsubmittedData()) {
+            return "Keni të dhëna të paruajtura (qoftë në formular, qoftë offline). Jeni i sigurt që doni të largoheni/rifreskoni?";
+        }
+    };
+
+    function goToResults() {
+        const baseUrl = "https://script.google.com/macros/s/AKfycbyLNtXi1JLIBej20hakiohCrUZQ77nJA3LFS0uoBcpsS4f7_4pXInzDHGExTD1QcHNq/exec"; 
+        window.open(baseUrl + "?page=results", "_blank");
+    }
+    
+    // Funksion i shtuar per te shmangur gabimin e Google Apps Script kur nuk ekziston
+    if (typeof google === 'undefined' || typeof google.script === 'undefined') {
+        console.warn("Google Apps Script API nuk është i disponueshëm. Funksionaliteti i serverit do të dështojë.");
+        
+        // Mocking google.script.run for testing purposes outside of Apps Script
+        if (typeof google === 'undefined') window.google = {};
+        if (typeof google.script === 'undefined') window.google.script = {
+            run: {
+                withSuccessHandler: (fn) => ({ withFailureHandler: (errFn) => ({ handleFileUpload: (data) => {
+                    setTimeout(() => {
+                        // Simulon dështim në 20% të rasteve ose sukses
+                        if (Math.random() < 0.2 || !navigator.onLine) {
+                            errFn({ message: "Simulim Gabimi Serveri/Offline" }, data);
+                        } else {
+                            fn({ success: true, message: "OK (Simuluar)" });
+                        }
+                    }, 1500); // Prit 1.5 sekonda
+                }, testFunction: () => {
+                    setTimeout(() => { fn("Lidhja OK (Simuluar)"); }, 500);
+                }}) }),
+            }
+        };
+    }
+
+</script>
+
+</body>
+=======
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
+    <base target="_top">
+    <title>Inspektimi</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        <?!= HtmlService.createTemplateFromFile('Style').evaluate().getContent(); ?>  /* CSS-i lokal per map dhe formën */  
+    </style>
+</head>
+<body>
+
+<div id="header-container">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <h1 style="margin: 0; font-size: 3.5em;">
+            <a href="<?= ScriptApp.getService().getUrl() ?>" style="text-decoration: none; color: inherit;">
+                Inspekto
+            </a>
+        </h1>
+        
+        <a href="<?= ScriptApp.getService().getUrl() ?>?page=manual" target="_blank" style="text-decoration: none; color: #007bff;" title="Manual Përdorimi">
+            <i class="material-icons" style="font-size: 48px; vertical-align: middle;" >help_outline</i>
+        </a>
+    </div>
+    <!-- <h1>
+      <a href="<?= ScriptApp.getService().getUrl() ?>?page=manual" style="text-decoration: none; color: inherit;">
+            INSPEKTIMI
+      </a>
+    </h1> -->
+    <div class="control-group d-flex align-items-center mb-3">    
+        <div class="form-check form-switch me-3 switch-lg">
+            <input class="form-check-input" type="checkbox" role="switch" id="toggleArea" checked onchange="toggleAreaAndSetOpacity()">
+        </div>
+        <label class="form-check-label me-3" for="toggleArea"><h1>Zona</h1></label>
+        <div class="flex-grow-1 me-3">
+            <input type="range" class="slider-lg" id="areaOpacitySlider" min="0.2" max="0.9" step="0.1" value="0.5" oninput="changeAreaOpacity(this.value)">
+        </div>
+        <select id="baseLayerSelector" class="form-select form-select-lg" onchange="changeBaseLayer(this.value)">Shtresat</select>        
+    </div>
+</div>
+
+<div id="mapid"></div>
+
+<form id="inspectionForm" onsubmit="return handleFormSubmit(this);">
+
+    <label for="email">Email Address:</label>
+    <input type="email" id="email" name="email" required oninput="checkFormValidity()" placeholder="Vendosni emailin tuaj...">
+
+    <label>Data & Ora e Regjistrimit:</label>
+    <div class="input-group">
+        <input type="date" id="data" name="data" required oninput="checkFormValidity()">
+        <input type="time" id="ora" name="ora" required oninput="checkFormValidity()">
+        <button type="button" id="setTimeButton" onclick="setCurrentDateTime()">
+            <span class="material-icons">calendar_month</span> 
+            <span class="material-icons">access_time</span> 
+        </button>
+    </div>
+
+    <label>Gjerësi & Gjatësi gjeografike:</label>
+    <div class="input-group" id="latLonGroup">
+        <input type="text" id="latitude" name="latitude" placeholder="Gjerësi (Lat)" readonly required>
+        <input type="text" id="longitude" name="longitude" placeholder="Gjatësi (Lon)" readonly required>
+        <button type="button" id="gpsButton" onclick="getLocationAndDisplay()">
+            <span class="material-icons">gps_fixed</span>
+        </button>
+    </div>
+
+    <label for="qellimi">Qëllimi i Inspektimit:</label>
+    <textarea id="qellimi" name="qellimi" rows="3" required oninput="checkFormValidity()"></textarea>
+
+    <label>Foto (Opsionale):</label>
+
+    <div class="file-input-group">
+        <label for="galleryFile_hidden" class="file-button-50">
+            <span class="material-icons">folder_open</span> Ngarko Foto
+        </label>
+        
+        <label for="cameraFile" class="file-button-50">
+            <span class="material-icons">photo_camera</span> Bëj Foto
+        </label>
+
+        <button type="button" id="clearFileButton" onclick="clearFile()" style="display: none; color: white;">
+            <span class="material-icons">delete_forever</span> Hiq Foton  
+        </button>
+    </div>
+
+    <div id="fileStatus">Asnjë foto nuk është zgjedhur.</div> 
+    
+    <input type="file" id="galleryFile_hidden" name="galleryFile_hidden" accept="image/*" style="display: none;" onchange="handleFileInput(this)">
+    <input type="file" id="cameraFile" name="cameraFile_hidden" accept="image/*" capture="camera" style="display: none;" onchange="handleFileInput(this)">
+    <input type="hidden" id="photoFile" name="photoFile"> 
+
+    <hr>
+    
+    <div class="submit-group-wrapper">
+        <button type="button" class="btn-25" id="newButton" onclick="resetForm()"> <span class="material-icons">add_circle</span> Shto</button>
+        <button type="button" class="btn-25" id="testButton" onclick="testConnection()"> <span class="material-icons">tap_and_play</span> Testo </button>
+        <button type="submit" class="btn-50" id="submitButton" disabled> <span class="material-icons">send</span> Dërgo të Dhënat</button> 
+    </div>
+</form>
+
+<div class="footer-actions">    
+    <button type="button" class="action-button results-button" onclick="goToResults()"> <span class="material-icons">bar_chart</span> Rezultatet </button>
+
+    <button type="button" id="syncButton" class="action-button sync-button" onclick="syncData()" disabled>
+        <span class="material-icons">change_circle</span>
+        Sinkronizo Offline (<span id="offlineCount">0</span>)
+    </button>    
+</div>
+
+<div id="syncProgressContainer" style="display:none; margin-top: 15px;">
+    <progress id="syncProgressBar" value="0" max="100" style="width: 100%; height: 30px;"></progress>
+    <div id="syncProgressStatus" style="text-align: center; font-size: 32px; font-weight: 900; margin-top: 5px;"></div>
+</div>
+
+<div id="statusMessage" class="status"></div>
+
+<script>
+    var map;
+    var marker;
+    var accuracyCircle;
+    var isGpsCaptured = false;
+    const ASIG_WMS_URL = 'https://geoportal.asig.gov.al/service/wms'; 
+    var baseLayers = {}; 
+    var assignedAreaLayer; 
+    var isFileSizeValid = true;
+    let db;
+    const DB_NAME = 'InspeksionetOfflineDB';
+    const STORE_NAME = 'inspektimet';
+
+    // # NDËRTIMI I PROGRESS BAR-IT (Funksionet e Reja)
+
+    function showProgress(message, value = 0) {
+        const container = document.getElementById('syncProgressContainer');
+        const progressBar = document.getElementById('syncProgressBar');
+        const progressStatus = document.getElementById('syncProgressStatus');
+
+        // Fsheh mesazhin e statusit normal
+        document.getElementById("statusMessage").style.display = 'none';
+
+        progressBar.value = value;
+        progressStatus.textContent = message;
+        container.style.display = 'block';
+    }
+
+    function updateProgress(value, message) {
+        const progressBar = document.getElementById('syncProgressBar');
+        const progressStatus = document.getElementById('syncProgressStatus');
+        progressBar.value = value;
+        if (message) progressStatus.textContent = message;
+    }
+
+    function hideProgress(finalMessage = null, isError = false) {
+        const container = document.getElementById('syncProgressContainer');
+        const statusMessage = document.getElementById("statusMessage");
+
+        container.style.display = 'none';
+        statusMessage.style.display = 'block';
+
+        if (finalMessage) {
+            const color = isError ? 'red' : 'green';
+            statusMessage.innerHTML = `<span style="color: ${color};">${finalMessage}</span>`;
+        }
+    }
+
+
+    // 1. KRIJIMI/HAPJA E DATABAZËS
+    function openDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1); 
+
+            request.onerror = event => {
+                console.error("Gabim në hapjen e IndexedDB:", event.target.error);
+                reject(event.target.error);
+            };
+
+            request.onsuccess = event => {
+                db = event.target.result;
+                console.log("IndexedDB u hap me sukses.");
+                updateOfflineCount(); 
+                resolve(db);
+            };
+
+            request.onupgradeneeded = event => {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+        });
+    }
+
+    // 2. RUAJTJA E TË DHËNAVE NË IDB DHE KTHIMI I NUMRIT TË RI TË REKORDEVE
+    function saveToIndexedDB(data) {
+        return new Promise((resolve, reject) => {
+            if (!db) {
+                reject(new Error("Databaza nuk është inicializuar."));
+                return;
+            }
+
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            const dataToStore = { ...data, timestamp_local: new Date().getTime() };
+            const request = store.add(dataToStore);
+
+            request.onsuccess = () => {
+                const countRequest = store.count();
+                
+                countRequest.onsuccess = () => {
+                    updateOfflineCount();
+                    resolve(countRequest.result); 
+                };
+                
+                countRequest.onerror = () => resolve(1); 
+            };
+
+            request.onerror = event => {
+                reject(event.target.error);
+            };
+        });
+    }
+
+    // 3. MARRJA E TË DHËNAVE NGA IDB
+    function getAllOfflineData() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("Databaza nuk është inicializuar.");
+            
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = event => resolve(event.target.result); 
+            request.onerror = event => reject(event.target.error);
+        });
+    }
+
+    // 4. FSHIRJA E TË DHËNAVE NGA IDB PAS SINKRONIZIMIT
+    function deleteFromIndexedDB(id) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("Databaza nuk është inicializuar.");
+            
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = event => reject(event.target.error);
+        });
+    }
+
+    // 5. RUAJTJA DHE AKTUALIZIMI I NUMRIT TË REGJISTRIMEVE OFFLINE
+    function updateOfflineCount() {
+        if (!db) return;
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.count();
+
+        request.onsuccess = event => {
+            const count = event.target.result;
+            document.getElementById('offlineCount').textContent = count;
+            document.getElementById('syncButton').disabled = (count === 0);
+        };
+    }
+    
+    // Merr të dhënat nga TeDhenatGjeo.gs dhe e vendos në variabël
+    //const USER_ASSIGNED_AREA = { "type": "FeatureCollection", "features": [] }; // Një objekt bosh si shembull
+    const USER_ASSIGNED_AREA = <?!= JSON.stringify(getUserAssignedArea()); ?>;
+    
+
+    function changeBaseLayer(layerName) {
+        if (!map) return;
+        
+        baseLayers.forEach(layer => {
+            if (map.hasLayer(layer.layer)) {
+                map.removeLayer(layer.layer);
+            }
+        });
+        
+        const newLayer = baseLayers.find(layer => layer.name === layerName);
+        if (newLayer) {
+            newLayer.layer.addTo(map);
+        }
+    }
+
+    function initMap() {
+        var defaultCoords = [41.3275, 19.8187];
+        
+        if (map) return; 
+        
+        map = L.map('mapid').setView(defaultCoords, 12); 
+
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        });
+        const ortofoto20cm = L.tileLayer.wms(ASIG_WMS_URL, {
+            layers: 'orthophoto_2015:OrthoImagery_20cm', format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, attribution: 'ASIG Ortofoto 20 cm'
+        });
+        const ortofoto8cm = L.tileLayer.wms(ASIG_WMS_URL, {
+            layers: 'orthophoto_2015:OrthoImagery_8cm', format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, attribution: 'ASIG Ortofoto 8 cm'
+        });
+        const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        baseLayers = [     
+            { name: "Esri World Imagery", layer: esriImagery },
+            { name: "OpenStreetMap", layer: osmLayer },
+            { name: "ALB 2015 20 cm", layer: ortofoto20cm },
+            { name: "ALB 2015 8 cm", layer: ortofoto8cm }            
+        ];
+        
+        esriImagery.addTo(map);
+        
+        const selector = document.getElementById('baseLayerSelector');
+        baseLayers.forEach(layer => {
+            const option = document.createElement('option');
+            option.value = layer.name;
+            option.text = layer.name;
+            selector.appendChild(option);
+        });
+        
+        const initialOpacity = parseFloat(document.getElementById('areaOpacitySlider').value);
+
+        assignedAreaLayer = L.geoJSON(USER_ASSIGNED_AREA, {
+            style: function (feature) {
+                return {
+                    color: "#dc3545", weight: 3, opacity: 0.8, fillColor: "#dc3545", fillOpacity: initialOpacity         
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties && feature.properties.name) {
+                    layer.bindPopup("Zona e Caktuar: " + feature.properties.name);
+                }
+            }
+        }).addTo(map); 
+
+        map.invalidateSize();
+    }
+    
+    function changeAreaOpacity(value) {
+        const opacity = parseFloat(value); 
+        const checkbox = document.getElementById('toggleArea');
+        
+        if (assignedAreaLayer && checkbox.checked) {
+            assignedAreaLayer.setStyle({
+                fillOpacity: opacity 
+            });
+        }
+    }
+    
+    function toggleAreaAndSetOpacity() {
+        const checkbox = document.getElementById('toggleArea');
+        const opacityValue = parseFloat(document.getElementById('areaOpacitySlider').value);
+
+        if (assignedAreaLayer) {
+            if (checkbox.checked) {
+                if (!map.hasLayer(assignedAreaLayer)) {
+                    assignedAreaLayer.addTo(map);
+                }
+                assignedAreaLayer.setStyle({
+                    fillOpacity: opacityValue
+                });
+            } else {
+                if (map.hasLayer(assignedAreaLayer)) {
+                    map.removeLayer(assignedAreaLayer);
+                }
+            }
+        }
+    }
+    
+    window.onload = function() {
+        initMap();
+        
+        changeAreaOpacity(document.getElementById('areaOpacitySlider').value); 
+
+        openDatabase()
+        .then(() => {
+            console.log("IndexedDB u inicializua dhe u kontrollua numri i të dhënave offline.");
+        })
+        .catch(e => {
+            console.warn("IndexedDB nuk mund të hapet. Funksionaliteti offline nuk do të jetë në dispozicion.", e);
+            document.getElementById('syncButton').disabled = true;
+        });
+
+        setTimeout(function() {
+            if (map) {
+                map.invalidateSize(true);
+            }
+        }, 100);
+
+        checkFormValidity();
+    };
+    
+    // -----------------------------------------------------------
+    // # FUNKSIONET E FORMULARIT DHE PROGRESSIT TË DËRGIMIT
+    // -----------------------------------------------------------
+
+    function handleFileInput(input) {
+        const fileStatus = document.getElementById('fileStatus'); 
+        const clearButton = document.getElementById('clearFileButton');
+        const hiddenFileInput = document.getElementById('photoFile');
+        const uploadButtons = document.querySelectorAll('.file-input-group label');
+
+        hiddenFileInput.fileToSubmit = null;
+        isFileSizeValid = true; 
+        
+        // VLERË NGA USER GUIDA: Limiti i madhësisë së dërgimit PËRFUNDIMTAR
+        const MAX_DELIVERY_SIZE_MB = 5; 
+        const MAX_DELIVERY_SIZE_BYTES = MAX_DELIVERY_SIZE_MB * 1024 * 1024;
+
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
+            
+            fileStatus.innerHTML = `<span style="color: blue;">Duke procesuar dhe kompresuar foton (Origjinale: ${originalSizeMB} MB)... Ju lutemi prisni.</span>`;
+            
+            // Kompresojmë gjithmonë nëse skedari origjinal është mbi 1MB ose mbi 5MB (për siguri)
+            if (file.size > 1 * 1024 * 1024 || file.size > MAX_DELIVERY_SIZE_BYTES) { 
+                
+                // Faza 1: Kompresimi
+                compressImage(file)
+                    .then(compressedBlob => {
+                        hiddenFileInput.fileToSubmit = compressedBlob;
+                        
+                        const newSizeMB = (compressedBlob.size / 1024 / 1024).toFixed(2);
+                        const source = input.id === 'cameraFile' ? 'Kamera &#128248;' : 'Galeria &#128444;'; 
+                        
+                        if (compressedBlob.size > MAX_DELIVERY_SIZE_BYTES) {
+                            // Kjo ndodh rrallë, por mbetet si kontroll sigurie
+                            isFileSizeValid = false;
+                            fileStatus.innerHTML = `<span style="color: red;">❌ Gabim! Fotoja është shumë e madhe edhe pas kompresimit (${newSizeMB} MB). Maksimuni: ${MAX_DELIVERY_SIZE_MB} MB.</span>`;
+                        } else {
+                            isFileSizeValid = true;
+                            fileStatus.innerHTML = `✅ <b>File:</b> ${file.name} (Origjinal: ${originalSizeMB} MB, I Kompresuar: ${newSizeMB} MB) - Burimi: ${source}`;
+                        }
+
+                        // Fiksoni pamjen e butonave
+                        uploadButtons.forEach(btn => {
+                            btn.classList.remove('file-button-50');
+                            btn.classList.add('file-button-33');
+                        });
+                        clearButton.style.display = 'flex';
+                        
+                        // Pastroni fushat origjinale të input-it (shmang dërgimin e skedarit origjinal)
+                        document.getElementById('galleryFile_hidden').value = '';
+                        document.getElementById('cameraFile').value = '';
+                        
+                        checkFormValidity();
+                    })
+                    .catch(error => {
+                        // Nëse dështon lexuesi ose kompresimi
+                        fileStatus.innerHTML = `<span style="color: red;">❌ Gabim në procesimin e fotos. Provoni një foto tjetër.</span>`;
+                        isFileSizeValid = false;
+                        checkFormValidity();
+                    });
+            } else {
+                // Skedarët e vegjël (< 1MB) shkojnë direkt
+                hiddenFileInput.fileToSubmit = file;
+                isFileSizeValid = true;
+                
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                const source = input.id === 'cameraFile' ? 'Kamera &#128248;' : 'Galeria &#128444;'; 
+                fileStatus.innerHTML = `<b>File:</b> ${file.name} (${fileSizeMB} MB) - Burimi: ${source} (Nuk u kompresua)`;
+                
+                uploadButtons.forEach(btn => {
+                    btn.classList.remove('file-button-50');
+                    btn.classList.add('file-button-33');
+                });
+                clearButton.style.display = 'flex';
+                checkFormValidity();
+            }
+            
+        } else {
+            // Asnjë skedar nuk u zgjodh ose u pastrua
+            fileStatus.innerHTML = 'Asnjë file nuk është zgjedhur.';
+            uploadButtons.forEach(btn => {
+                btn.classList.remove('file-button-33');
+                btn.classList.add('file-button-50');
+            });
+            clearButton.style.display = 'none'; 
+            isFileSizeValid = true; 
+            checkFormValidity();
+        }
+    }
+
+    /* ========================================================================= */
+    /* # FUNKSIONI I RI: ZVOGËLIMI DHE KOMPRESIMI I FOTOS ME CANVAS */
+    /* ========================================================================= */
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = function(readerEvent) {
+                const image = new Image();
+                
+                image.onload = function() {
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+
+                    // Vlerat maksimale për të synuar rreth 3MB
+                    const MAX_WIDTH = 2500;
+                    const MAX_HEIGHT = 2500; 
+                    const quality = 0.90; // Cilësia e kompresimit (90%)
+
+                    let width = image.width;
+                    let height = image.height;
+
+                    // Rregullo madhësinë për të ruajtur raportin (aspect ratio)
+                    if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                        if (width > height) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        } else {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // Vizato imazhin me rezolucionin e ri
+                    ctx.drawImage(image, 0, 0, width, height);
+
+                    // Eksporto si Base64 JPEG me cilësinë e kërkuar
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    
+                    // Përgatit një Blob të ri nga Base64, e ruan si 'skedar' 
+                    const dataUrlParts = compressedDataUrl.split(',');
+                    const mimeType = dataUrlParts[0].match(/:(.*?);/)[1];
+                    const base64 = dataUrlParts[1];
+                    
+                    // Kthe Base64 në një Blob (File-like object)
+                    const binary = atob(base64);
+                    const array = [];
+                    for (let i = 0; i < binary.length; i++) {
+                        array.push(binary.charCodeAt(i));
+                    }
+                    const compressedBlob = new Blob([new Uint8Array(array)], { type: mimeType });
+                    
+                    // Shtojmë vetëm emrin origjinal të skedarit (vetëm për reference)
+                    compressedBlob.name = file.name;
+                    
+                    resolve(compressedBlob);
+                };
+                image.src = readerEvent.target.result;
+            };
+
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function clearFile() {
+        document.getElementById('galleryFile_hidden').value = '';
+        document.getElementById('cameraFile').value = '';
+        handleFileInput(document.getElementById('galleryFile_hidden'));
+    }
+
+    // FUNKSIONI I MODIFIKUAR KRYESOR
+    function handleFormSubmit(form) {
+        const submitButton = document.getElementById("submitButton");
+        
+        if (submitButton.disabled) {
+            hideProgress('❌ Plotësoni të gjitha fushat e kërkuara.', true);
+            return false;
+        }
+        
+        submitButton.disabled = true;
+        showProgress('Duke filluar procesin...', 0);
+
+        const formData = new FormData(form);
+
+        const plainData = {
+            email: formData.get("email"), data: formData.get("data"), ora: formData.get("ora"), qellimi: formData.get("qellimi"), latitude: formData.get("latitude"), longitude: formData.get("longitude")
+        };
+        
+        const fileToUploadBlob = document.getElementById('photoFile').fileToSubmit;
+
+        function sendOrStore(dataToSend) {
+            
+            if (!isOnline()) {
+                // NËSE OFFLINE: Shkon direkt te ruajtja lokale
+                onFailure("Lidhja me internetin mungon. Ruajtja u krye lokalisht.", dataToSend);
+                return; 
+            }
+
+            // NËSE ONLINE: Këtu fillon dërgimi i vërtetë, progresi simulohet 50%
+            updateProgress(50, 'Duke dërguar të dhënat në Server...');
+
+            google.script.run
+                .withSuccessHandler(onSuccess)
+                .withFailureHandler(function(error) {
+                    onFailure(error, dataToSend); 
+                })
+                .handleFileUpload(dataToSend);
+        }
+        
+        if (fileToUploadBlob) {
+            if (!isFileSizeValid) {
+                submitButton.disabled = false;
+                hideProgress('❌ Madhësia e file-it është e pavlefshme.', true);
+                return false;
+            }
+
+            // Faza 1: Leximi/Kodimi i fotos (Progresi shkon nga 0 në 50)
+            updateProgress(10, 'Duke koduar foto-n e kompresuar (Base64)...');
+
+            const reader = new FileReader();
+            reader.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    // Përdorim vetëm gjysmën e progresit (nga 0 në 49) për leximin e file-it
+                    const percent = Math.min(49, Math.round((e.loaded / e.total) * 49));
+                    updateProgress(percent, `Duke procesuar foto-n: ${percent}%`);
+                }
+            };
+            
+            reader.onload = function(e) {
+                updateProgress(50, 'Foto u kodua. Duke u përgatitur për dërgim...');
+                
+                const base64 = e.target.result;
+                const parts = base64.split(',');
+                // fileData mban vetëm vargun Base64, pa pjesën "data:image/jpeg;base64,"
+                plainData.fileData = parts.length > 1 ? parts[1] : parts[0]; 
+                plainData.fileName = fileToUploadBlob.name || "foto_e_kompresuar.jpg"; // Përdor emrin origjinal ose një emër default
+
+                sendOrStore(plainData); 
+            };
+            
+            reader.onerror = function(e) {
+                submitButton.disabled = false;
+                hideProgress(`❌ Gabim në leximin e file-it: ${e.target.error.message}`, true);
+            }
+
+            // Lexo Blob-in (Base64)
+            reader.readAsDataURL(fileToUploadBlob); 
+        } else {
+            // Dërgo vetëm të dhënat e formularit
+            sendOrStore(plainData); 
+        }
+
+        return false;
+    }
+
+    // FUNKSIONI I THIRRJES SUKSES (Ndryshuar lehtë)
+    function onSuccess(response) {
+        var submitButton = document.getElementById("submitButton");
+        
+        if (response && response.success) {
+            hideProgress('✅ Të dhënat u regjistruan me sukses!', false); // SUKSES ONLINE
+            resetForm(false); 
+        } else {
+            hideProgress('❌ GABIM SERVERI: ' + (response.message || 'Përgjigje e panjohur.'), true); // GABIM SERVERI
+        }
+        submitButton.disabled = false;
+        checkFormValidity();
+    }
+
+    // FUNKSIONI I THIRRJES GABIM (Ndryshuar për të shfaqur Progresin e Ruajtjes Lokale)
+    function onFailure(error, dataToStore) { 
+      var submitButton = document.getElementById("submitButton");
+      
+      // KONTROLLI KRYESOR: A ka të dhëna (dmth., a ka dështuar një dërgim formulari)?
+      if (dataToStore) {
+          
+          // Këtu shfaqet Progresi i Ruajtjes Lokale (shumë i shpejtë)
+          showProgress('Duke ruajtur të dhënat lokalisht...', 75);
+
+          saveToIndexedDB(dataToStore)
+              .then((numriTotal) => {
+                  
+                  // Përfundimi i progresit
+                  updateProgress(100, `Ruajtja lokale u krye. (Totali: ${numriTotal})`); 
+                  resetForm(true); 
+                  
+                  // Fsheh Progres Bar-in dhe shfaq Statusin
+                  setTimeout(() => {
+                      hideProgress(`⚠️ Offline: Të dhënat u ruajtën lokalisht. (Totali: ${numriTotal})`, false);
+                  }, 800); // Prit pak për të shfaqur 100%
+
+              })
+              .catch(idbError => {
+                  hideProgress(`❌ GABIM KRITIK! Dështoi dërgimi dhe ruajtja lokale: ${idbError.message || idbError}`, true);
+              })
+              .finally(() => {
+                  submitButton.disabled = false;
+                  checkFormValidity();
+              });
+      } else {
+          // RASTI 2: GABIM NË THIRRJE TË TJERA (p.sh., Testo Lidhjen ose Sinkronizimi)
+          // Këtu përdorim funksionin e ri hideProgress për të rregulluar shfaqjen e statusit
+          hideProgress(`❌ GABIM SERVERI: Lidhja dështoi. ${error.message || error}`, true);
+          submitButton.disabled = false;
+          checkFormValidity();
+      }
+    }
+
+    function setCurrentDateTime() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const dateString = `${yyyy}-${mm}-${dd}`;
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const timeString = `${hh}:${min}`;
+        document.getElementById('data').value = dateString;
+        document.getElementById('ora').value = timeString;
+        checkFormValidity();
+    }
+
+    function getLocationAndDisplay() {
+        // Përdorim statusMessage normal këtu, pasi nuk ka nevojë për Progres Bar
+        document.getElementById("statusMessage").innerHTML = '<span style="color: blue;">Duke kërkuar vendndodhjen... Lejo GPS.</span>';
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lon = position.coords.longitude;
+                    var accuracy = position.coords.accuracy;
+
+                    document.getElementById('latitude').value = lat.toFixed(6);
+                    document.getElementById('longitude').value = lon.toFixed(6);
+                    isGpsCaptured = true;
+                    displayMarker(lat, lon, accuracy);
+
+                    document.getElementById("statusMessage").innerHTML = '<span style="color: green;">✅ GPS u kap me sukses!</span>';
+                    checkFormValidity();
+                },
+                function(error) {
+                    document.getElementById("statusMessage").innerHTML = '<span style="color: red;">❌ Gabim GPS: ' + error.message + '. Përpiquni përsëri.</span>';
+                    isGpsCaptured = false;
+                },
+                {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
+            );
+        } else {
+            document.getElementById("statusMessage").innerHTML = '<span style="color: red;">❌ Vendndodhja nuk mbështetet nga ky shfletues.</span>';
+            isGpsCaptured = false;
+        }
+    }
+
+    function displayMarker(lat, lon, accuracy) { 
+        var zoomLevel = 19;
+        var coords = [lat, lon];
+        
+        if (marker) { map.removeLayer(marker); }
+        if (accuracyCircle) { map.removeLayer(accuracyCircle); }
+        
+        marker = L.marker(coords).addTo(map).bindPopup(`Vendndodhja e Kapur (Saktësia: ${accuracy.toFixed(1)} m)`).openPopup(); 
+        
+        accuracyCircle = L.circle(coords, {
+            radius: accuracy, 
+            color: '#007bff', 
+            fillColor: '#007bff', 
+            fillOpacity: 0.2, 
+            weight: 1
+        }).addTo(map);
+
+        map.setView(coords, zoomLevel);
+    }
+
+    function checkFormValidity() {
+        const form = document.getElementById('inspectionForm');
+        const submitButton = document.getElementById('submitButton');
+
+        const requiredInputsFilled = Array.from(form.querySelectorAll('[required]')).every(input => {
+            return input.value.trim() !== '';
+        });
+
+        submitButton.disabled = !(requiredInputsFilled && isFileSizeValid);
+    }
+
+    function syncData() {
+        const syncButton = document.getElementById('syncButton');
+        
+        syncButton.disabled = true;
+        showProgress('Duke filluar sinkronizimin...', 0);
+        
+        getAllOfflineData()
+            .then(offlineRecords => {
+                const totalRecords = offlineRecords.length;
+                let successCount = 0;
+                let failedCount = 0;
+                
+                if (totalRecords === 0) {
+                    hideProgress('✅ Asnjë e dhënë për t\'u sinkronizuar.', false);
+                    syncButton.disabled = false;
+                    return;
+                }
+
+                updateProgress(0, `0 nga ${totalRecords} u dërguan.`);
+
+                const processNextRecord = (index) => {
+                    if (index >= totalRecords) {
+                        
+                        const finalMsg = successCount === totalRecords 
+                            ? `✅ SUKSES: ${successCount} rekorde u sinkronizuan!`
+                            : `⚠️ U sinkronizuan ${successCount} rekorde. Dështuan ${failedCount} (kontrollo lidhjen).`;
+                            
+                        hideProgress(finalMsg, failedCount > 0);
+                        syncButton.disabled = false;
+                        updateOfflineCount(); 
+                        return;
+                    }
+
+                    const record = offlineRecords[index];
+                    
+                    google.script.run
+                        .withSuccessHandler((response) => {
+                            if (response.success) {
+                                successCount++;
+                                
+                                deleteFromIndexedDB(record.id)
+                                    .finally(() => {
+                                        const progress = ((successCount + failedCount) / totalRecords) * 100;
+                                        updateProgress(progress, `${successCount} nga ${totalRecords} u dërguan.`);
+                                        processNextRecord(index + 1);
+                                    });
+                            } else {
+                                // Rekordi dështon, por vazhdojmë me rekordin tjetër
+                                failedCount++;
+                                processNextRecord(index + 1); 
+                            }
+                        })
+                        .withFailureHandler((error) => {
+                            // Gabim në lidhjen e App Script
+                            failedCount++;
+                            processNextRecord(index + 1);
+                        })
+                        .handleFileUpload(record); 
+                };
+                
+                processNextRecord(0);
+
+            })
+            .catch(error => {
+                hideProgress(`❌ GABIM SINKRONIZIMI: Dështoi marrja e të dhënave lokale. ${error.message || error}`, true);
+                syncButton.disabled = false;
+                updateOfflineCount();
+            });
+    }
+
+    function testConnection() {
+        var statusMessage = document.getElementById("statusMessage");
+        statusMessage.innerHTML = '<span style="color: blue;">Duke testuar lidhjen me serverin...</span>';
+
+        google.script.run.withSuccessHandler(function(response) {
+            statusMessage.innerHTML = `<span style="color: green;">✅ SUKSES: ${response}</span>`;
+        }).withFailureHandler(onFailure).testFunction(); 
+    }
+
+    function isOnline() {
+        return navigator.onLine; 
+    }
+
+    function resetForm(clearStatus = true) {
+      // Pastron të gjitha fushat, përveç Email
+      document.getElementById('data').value = '';
+      document.getElementById('ora').value = '';
+      document.getElementById('qellimi').value = '';
+      document.getElementById('latitude').value = '';
+      document.getElementById('longitude').value = '';
+      
+      // Pastron foto-n
+      clearFile(); 
+      
+      isGpsCaptured = false;
+      if (marker) { map.removeLayer(marker); marker = null; }
+      if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+      
+      // Pastrimi i mesazhit bëhet opsional
+      if (clearStatus) {
+        document.getElementById("statusMessage").innerHTML = '';
+      }
+      
+      // Sigurohemi që Progres Bari të fshihet
+      document.getElementById('syncProgressContainer').style.display = 'none';
+      document.getElementById("statusMessage").style.display = 'block';
+
+      checkFormValidity();
+      
+      document.getElementById("submitButton").disabled = true;
+  }
+
+    function hasOfflineData() {
+        const countElement = document.getElementById('offlineCount'); 
+        const count = parseInt(countElement.textContent || '0');
+        return count > 0;
+    }
+
+    function hasUnsubmittedData() {
+        return document.getElementById('qellimi').value.trim() !== '' || 
+                document.getElementById('latitude').value.trim() !== ''; 
+    }
+
+    window.onbeforeunload = function() {
+        if (hasOfflineData() || hasUnsubmittedData()) {
+            return "Keni të dhëna të paruajtura (qoftë në formular, qoftë offline). Jeni i sigurt që doni të largoheni/rifreskoni?";
+        }
+    };
+
+    function goToResults() {
+        const baseUrl = "https://script.google.com/macros/s/AKfycbyLNtXi1JLIBej20hakiohCrUZQ77nJA3LFS0uoBcpsS4f7_4pXInzDHGExTD1QcHNq/exec"; 
+        window.open(baseUrl + "?page=results", "_blank");
+    }
+    
+    // Funksion i shtuar per te shmangur gabimin e Google Apps Script kur nuk ekziston
+    if (typeof google === 'undefined' || typeof google.script === 'undefined') {
+        console.warn("Google Apps Script API nuk është i disponueshëm. Funksionaliteti i serverit do të dështojë.");
+        
+        // Mocking google.script.run for testing purposes outside of Apps Script
+        if (typeof google === 'undefined') window.google = {};
+        if (typeof google.script === 'undefined') window.google.script = {
+            run: {
+                withSuccessHandler: (fn) => ({ withFailureHandler: (errFn) => ({ handleFileUpload: (data) => {
+                    setTimeout(() => {
+                        // Simulon dështim në 20% të rasteve ose sukses
+                        if (Math.random() < 0.2 || !navigator.onLine) {
+                            errFn({ message: "Simulim Gabimi Serveri/Offline" }, data);
+                        } else {
+                            fn({ success: true, message: "OK (Simuluar)" });
+                        }
+                    }, 1500); // Prit 1.5 sekonda
+                }, testFunction: () => {
+                    setTimeout(() => { fn("Lidhja OK (Simuluar)"); }, 500);
+                }}) }),
+            }
+        };
+    }
+
+</script>
+
+</body>
+>>>>>>> a5f1ea22 (instalo librarite e reja)
+</html>
