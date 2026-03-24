@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client'
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -113,7 +112,6 @@ const btnBack = { padding: '10px 15px', backgroundColor: '#6c757d', color: 'whit
 const tableWrapper = { boxShadow: '0 4px 15px rgba(0,0,0,0.1)', borderRadius: '10px', overflow: 'hidden' };
 const tableS = { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white' };
 const thS = { padding: '15px', textAlign: 'left', borderBottom: '2px solid #dee2e6' };
-=======
 'use client'
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -228,5 +226,4 @@ const btnBack = { padding: '10px 15px', backgroundColor: '#6c757d', color: 'whit
 const tableWrapper = { boxShadow: '0 4px 15px rgba(0,0,0,0.1)', borderRadius: '10px', overflow: 'hidden' };
 const tableS = { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white' };
 const thS = { padding: '15px', textAlign: 'left', borderBottom: '2px solid #dee2e6' };
->>>>>>> a5f1ea22 (instalo librarite e reja)
 const tdS = { padding: '12px' };
