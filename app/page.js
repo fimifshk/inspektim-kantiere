@@ -1,9 +1,8 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { supabase } from '../lib/supabase'
 
-// Ngarkimi i hartës me dynamic për të shmangur gabimet e SSR në Next.js
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false })
@@ -13,10 +12,8 @@ export default function Home() {
   const [notes, setNotes] = useState('')
   const mapRef = useRef()
 
-  // Funksioni GPS me saktësi të lartë
   const lokalizo = () => {
     if (!navigator.geolocation) return alert("GPS nuk mbështetet!")
-    
     navigator.geolocation.getCurrentPosition((pos) => {
       const { latitude, longitude } = pos.coords
       setMarker({ lat: latitude, lng: longitude })
@@ -24,16 +21,12 @@ export default function Home() {
     }, (err) => alert("Gabim GPS: " + err.message), { enableHighAccuracy: true })
   }
 
-  // Ruajtja në Supabase
-  const ruajTeDhenat = async () => {
+  const ruajPiken = async () => {
     const { error } = await supabase.from('inspections').insert([
-      { latitude: marker.lat, longitude: marker.lng, notes: notes, created_at: new Date() }
+      { latitude: marker.lat, longitude: marker.lng, notes: notes }
     ])
-    if (error) alert("Gabim RLS: Kontrolloni politikat në Supabase!")
-    else {
-      alert("Pika u ruajt me sukses!")
-      setNotes('')
-    }
+    if (error) alert("Gabim: Kontrolloni RLS në Supabase!")
+    else { alert("Pika u ruajt!"); setNotes('') }
   }
 
   return (
@@ -43,16 +36,9 @@ export default function Home() {
         <Marker position={[marker.lat, marker.lng]} />
       </MapContainer>
 
-      {/* Interface-i mbi hartë */}
-      <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', width: '90%', maxWidth: '400px' }}>
-        <input 
-          type="text" 
-          placeholder="Shënime për inspektimin..." 
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px' }}
-        />
-        <button onClick={ruajTeDhenat} style={{ width: '100%', padding: '10px', background: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold' }}>Ruaj Inspektimin</button>
+      <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'white', padding: '15px', borderRadius: '10px', width: '90%', maxWidth: '400px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
+        <input type="text" placeholder="Shënime për këtë pikë..." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px', border: '1px solid #ccc' }} />
+        <button onClick={ruajPiken} style={{ width: '100%', padding: '10px', background: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold' }}>Ruaj në Databazë</button>
       </div>
 
       <button onClick={lokalizo} style={{ position: 'absolute', bottom: '30px', right: '20px', zIndex: 1000, width: '60px', height: '60px', borderRadius: '50%', background: 'white', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', fontSize: '24px', cursor: 'pointer' }}>📍</button>
