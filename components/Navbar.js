@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client'
 import Link from 'next/link';
 
@@ -23,7 +22,6 @@ export default function Navbar() {
       <Link href="/login" style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold' }}>🔑 Login</Link>
     </nav>
   );
-=======
 'use client'
 import Link from 'next/link';
 
@@ -48,5 +46,4 @@ export default function Navbar() {
       <Link href="/login" style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold' }}>🔑 Login</Link>
     </nav>
   );
->>>>>>> a5f1ea22 (instalo librarite e reja)
 }

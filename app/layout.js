@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 export const metadata = {
   title: 'Inspektim Kantiere',
   description: 'Sistemi GIS për Inspektimet',
@@ -21,7 +20,6 @@ export default function RootLayout({ children }) {
       </body>
     </html>
   )
-=======
 export const metadata = {
   title: 'Inspektim Kantiere',
   description: 'Sistemi GIS për Inspektimet',
@@ -44,5 +42,4 @@ export default function RootLayout({ children }) {
       </body>
     </html>
   )
->>>>>>> a5f1ea22 (instalo librarite e reja)
 }

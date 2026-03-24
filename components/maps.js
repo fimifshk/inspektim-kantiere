@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client'
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
@@ -107,7 +106,6 @@ const sidebarStyle = { position: 'absolute', top: '15px', left: '15px', width: '
 const labelS = { fontSize: '12px', fontWeight: 'bold', display: 'block', marginTop: '5px' };
 const inputS = { width: '100%', padding: '10px', marginBottom: '8px', border: '1px solid #ccc', borderRadius: '5px', fontSize: '13px' };
 const gridContainer = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' };
-=======
 'use client'
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
@@ -216,5 +214,4 @@ const sidebarStyle = { position: 'absolute', top: '15px', left: '15px', width: '
 const labelS = { fontSize: '12px', fontWeight: 'bold', display: 'block', marginTop: '5px' };
 const inputS = { width: '100%', padding: '10px', marginBottom: '8px', border: '1px solid #ccc', borderRadius: '5px', fontSize: '13px' };
 const gridContainer = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' };
->>>>>>> a5f1ea22 (instalo librarite e reja)
 const btnGrid = { border: 'none', borderRadius: '5px', color: 'white', fontWeight: 'bold', padding: '12px 5px', cursor: 'pointer', fontSize: '11px' };

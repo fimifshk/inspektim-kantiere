@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client'
 import dynamic from 'next/dynamic'
 
@@ -16,7 +15,6 @@ export default function Home() {
   )
 }
 
-=======
 'use client'
 import dynamic from 'next/dynamic'
 
@@ -34,4 +32,3 @@ export default function Home() {
   )
 }
 
->>>>>>> a5f1ea22 (instalo librarite e reja)

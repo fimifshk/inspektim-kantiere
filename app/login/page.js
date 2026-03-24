@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client'
 export const dynamic = 'force-dynamic';
 
@@ -102,7 +101,6 @@ const buttonStyle = {
   fontWeight: 'bold',
   cursor: 'pointer',
   transition: 'background 0.3s'
-=======
 'use client'
 export const dynamic = 'force-dynamic';
 
@@ -206,5 +204,4 @@ const buttonStyle = {
   fontWeight: 'bold',
   cursor: 'pointer',
   transition: 'background 0.3s'
->>>>>>> a5f1ea22 (instalo librarite e reja)
 };
